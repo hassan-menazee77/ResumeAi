@@ -1,0 +1,155 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Defy-All Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Transitive and Primitive Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth != null && (
+        request.auth.token.email_verified == true || 
+        (request.auth.token.email != null && request.auth.token.email.size() > 0)
+      );
+    }
+
+    function isOwner(ownerId) {
+      return isSignedIn() && request.auth.uid == ownerId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // 3. User Validation Blueprint
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'plan', 'usageCount', 'createdAt'])
+        && data.keys().size() == 5
+        && data.uid is string
+        && data.uid.size() <= 128
+        && data.uid == request.auth.uid
+        && data.email is string
+        && data.email.size() <= 256
+        && data.plan is string
+        && (data.plan == 'free' || data.plan == 'pro')
+        && data.usageCount is int
+        && data.usageCount >= 0
+        && data.createdAt is string;
+    }
+
+    // 4. Resume Validation Blueprint
+    function isValidResume(data) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'content', 'template', 'atsScore', 'createdAt', 'updatedAt'])
+        && data.keys().size() == 8
+        && data.id is string
+        && data.id.size() <= 128
+        && data.userId is string
+        && data.userId == request.auth.uid
+        && data.title is string
+        && data.title.size() <= 256
+        && data.content is map
+        && data.template is string
+        && data.template.size() <= 100
+        && data.atsScore is int
+        && data.atsScore >= 0
+        && data.atsScore <= 100
+        && data.createdAt is string
+        && data.updatedAt is string;
+    }
+
+    // 5. Cover Letter Validation Blueprint
+    function isValidCoverLetter(data) {
+      return data.keys().hasAll(['id', 'resumeId', 'userId', 'content', 'jobDescription', 'tone', 'createdAt'])
+        && data.keys().size() == 7
+        && data.id is string
+        && data.id.size() <= 128
+        && data.resumeId is string
+        && data.resumeId.size() <= 128
+        && data.userId is string
+        && data.userId == request.auth.uid
+        && data.content is string
+        && data.content.size() <= 50000
+        && data.jobDescription is string
+        && data.jobDescription.size() <= 20000
+        && data.tone is string
+        && data.tone.size() <= 100
+        && data.createdAt is string;
+    }
+
+    // 6. ATS Check Validation Blueprint
+    function isValidATSCheck(data) {
+      return data.keys().hasAll(['id', 'userId', 'score', 'keywords', 'suggestions', 'createdAt'])
+        && data.keys().size() == 6
+        && data.id is string
+        && data.id.size() <= 128
+        && data.userId is string
+        && data.userId == request.auth.uid
+        && data.score is int
+        && data.score >= 0
+        && data.score <= 100
+        && data.keywords is map
+        && data.suggestions is list
+        && data.createdAt is string;
+    }
+
+    // Match users
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isEmailVerified() && isValidUser(incoming());
+      allow update: if isOwner(userId) && isEmailVerified() && isValidUser(incoming()) 
+        && incoming().createdAt == existing().createdAt
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['plan', 'usageCount'])
+        );
+      allow delete: if false; // Users cannot be deleted from frontend
+
+      // Match resumes (nested subcollection)
+      match /resumes/{resumeId} {
+        allow get: if isSignedIn() && isOwner(userId);
+        allow list: if isSignedIn() && userId == request.auth.uid;
+        allow create: if isSignedIn() && isEmailVerified() && isValidId(resumeId) && isValidResume(incoming());
+        allow update: if isSignedIn() && isEmailVerified() && isValidId(resumeId) && isOwner(userId) && isValidResume(incoming())
+          && incoming().createdAt == existing().createdAt
+          && (
+            incoming().diff(existing()).affectedKeys().hasAny(['title', 'content', 'template', 'atsScore', 'updatedAt'])
+          );
+        allow delete: if isSignedIn() && isOwner(userId);
+      }
+    }
+
+    // Match root resumes (compatibility)
+    match /resumes/{resumeId} {
+      allow get, write: if false;
+    }
+
+    // Match cover_letters
+    match /cover_letters/{letterId} {
+      allow get: if isSignedIn() && isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isEmailVerified() && isValidId(letterId) && isValidCoverLetter(incoming());
+      allow delete: if isSignedIn() && isOwner(existing().userId);
+    }
+
+    // Match ats_checks
+    match /ats_checks/{checkId} {
+      allow get: if isSignedIn() && isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isEmailVerified() && isValidId(checkId) && isValidATSCheck(incoming());
+      allow delete: if isSignedIn() && isOwner(existing().userId);
+    }
+  }
+}

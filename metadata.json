@@ -1,0 +1,6 @@
+{
+  "name": "ResumeAI",
+  "description": "An premium AI-powered Resume Builder, Cover Letter Generator, and ATS Score Optimization platform designed to land your dream job.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

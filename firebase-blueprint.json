@@ -1,0 +1,83 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User subscription status and limit usage logs.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "plan": { "type": "string", "enum": ["free", "pro"] },
+        "usageCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "plan", "usageCount", "createdAt"]
+    },
+    "Resume": {
+      "title": "Resume",
+      "description": "A resume document built by the user containing personal info, experiences, education, and skills.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": {
+          "type": "object",
+          "description": "Rich content model of the resume"
+        },
+        "template": { "type": "string" },
+        "atsScore": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "content", "template", "createdAt", "updatedAt"]
+    },
+    "CoverLetter": {
+      "title": "CoverLetter",
+      "description": "A cover letter generated based on a resume and specific job posting text.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "resumeId": { "type": "string" },
+        "userId": { "type": "string" },
+        "content": { "type": "string" },
+        "jobDescription": { "type": "string" },
+        "tone": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "resumeId", "userId", "content", "jobDescription", "tone", "createdAt"]
+    },
+    "ATSCheck": {
+      "title": "ATSCheck",
+      "description": "ATS Checker log mapping keyword matches, actionable items, and score comparisons.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "score": { "type": "integer" },
+        "keywords": { "type": "object" },
+        "suggestions": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "score", "keywords", "suggestions", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of users and their plan detail levels."
+    },
+    "/resumes/{resumeId}": {
+      "schema": "Resume",
+      "description": "Resumes created in the system."
+    },
+    "/cover_letters/{letterId}": {
+      "schema": "CoverLetter",
+      "description": "Generated cover letters mapped to resume documents."
+    },
+    "/ats_checks/{checkId}": {
+      "schema": "ATSCheck",
+      "description": "Analysis log of resume match-percentage checks."
+    }
+  }
+}
