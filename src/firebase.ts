@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import firebaseConfig from "../firebase-applet-config.json";
 
@@ -62,11 +62,20 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 // Authentication hooks
 export async function loginWithGoogle() {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
-    return result.user;
+    await signInWithRedirect(auth, googleProvider);
   } catch (error) {
     console.error("Google Authenticate Call fail:", error);
     throw error;
+  }
+}
+
+export async function getLoginResult() {
+  try {
+    const result = await getRedirectResult(auth);
+    return result?.user || null;
+  } catch (error) {
+    console.error("Redirect result fail:", error);
+    return null;
   }
 }
 
