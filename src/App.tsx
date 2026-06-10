@@ -288,7 +288,7 @@ export default function App() {
     <div className="bg-[#0a0a0f] text-slate-100 min-h-screen">
       {activeTab === "landing" && (
         <LandingPage 
-          onStartBuilding={user ? () => setActiveTab("dashboard") : handleCreateNewResume}
+          onStartBuilding={user ? () => setActiveTab("dashboard") : handleLogin}
           onLogin={handleLogin}
           userEmail={user?.email}
         />
