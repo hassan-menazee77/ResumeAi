@@ -18,8 +18,13 @@ export default function App() {
   const [activeResumeId, setActiveResumeId] = useState<string | null>(null);
 
   useEffect(() => {
-    getLoginResult().then((user) => {
-      if (user) console.log("Redirect login success:", user.email);
+    getLoginResult().then((redirectUser) => {
+      if (redirectUser) {
+        console.log("Redirect login success:", redirectUser.email);
+        setUser(redirectUser);
+        setActiveTab("dashboard");
+        fetchResumesFromFirestore(redirectUser.uid);
+      }
     });
 
     let unsubscribeUser: (() => void) | null = null;
