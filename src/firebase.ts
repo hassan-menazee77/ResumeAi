@@ -3,15 +3,12 @@ import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, sig
 import { getFirestore } from "firebase/firestore";
 import firebaseConfig from "../firebase-applet-config.json";
 
-// Initialize Firebase App
 const app = initializeApp(firebaseConfig);
 
-// Initialize Services
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth();
 export const googleProvider = new GoogleAuthProvider();
 
-// Error definitions for security rule audits
 export enum OperationType {
   CREATE = "create",
   UPDATE = "update",
@@ -59,7 +56,6 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-// Authentication hooks
 export async function loginWithGoogle() {
   try {
     await signInWithRedirect(auth, googleProvider);
