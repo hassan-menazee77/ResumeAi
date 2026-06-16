@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { onAuthStateChanged, User, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { onAuthStateChanged, User } from "firebase/auth";
 import { collection, doc, setDoc, getDocs, deleteDoc, onSnapshot } from "firebase/firestore";
-import { auth, db, loginWithGoogle, logoutUser, handleFirestoreError, OperationType } from "./firebase";
+import { auth, db, loginWithGoogle, logoutUser, handleFirestoreError, OperationType, getLoginResult } from "./firebase";
 import { LandingPage } from "./components/LandingPage";
 import { Dashboard } from "./components/Dashboard";
 import { ResumeBuilder } from "./components/ResumeBuilder";
@@ -14,12 +14,14 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<"landing" | "dashboard" | "builder" | "ats">("landing");
   const [userPlan, setUserPlan] = useState<"free" | "pro">("free");
   
-  // Resumes list and active editing ID
   const [resumes, setResumes] = useState<ResumeDocument[]>([]);
   const [activeResumeId, setActiveResumeId] = useState<string | null>(null);
 
-  // Auth subscriber
   useEffect(() => {
+    getLoginResult().then((user) => {
+      if (user) console.log("Redirect login success:", user.email);
+    });
+
     let unsubscribeUser: (() => void) | null = null;
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
@@ -31,13 +33,11 @@ export default function App() {
         setActiveTab("dashboard");
         fetchResumesFromFirestore(firebaseUser.uid);
         
-        // Listen to user plan real-time
         const userDocRef = doc(db, "users", firebaseUser.uid);
         unsubscribeUser = onSnapshot(userDocRef, async (snap) => {
           if (snap.exists()) {
             setUserPlan(snap.data().plan || "free");
           } else {
-            // First time login - initialize user document
             const newUserDoc = {
               uid: firebaseUser.uid,
               email: firebaseUser.email || "",
@@ -54,7 +54,6 @@ export default function App() {
           }
         });
       } else {
-        // Clear resumes upon signout and return to showcase
         setResumes([]);
         setActiveTab("landing");
         loadResumesFromLocalStorage();
@@ -68,7 +67,6 @@ export default function App() {
     };
   }, []);
 
-  // Fetch from firestore
   const fetchResumesFromFirestore = async (uid: string) => {
     try {
       const colRef = collection(db, "users", uid, "resumes");
@@ -84,7 +82,6 @@ export default function App() {
     }
   };
 
-  // Safe localStorage fallbacks
   const loadResumesFromLocalStorage = () => {
     try {
       const cached = localStorage.getItem("resume_ai_docs");
@@ -106,7 +103,6 @@ export default function App() {
     }
   };
 
-  // Login handler
   const handleLogin = async () => {
     try {
       await loginWithGoogle();
@@ -115,7 +111,6 @@ export default function App() {
     }
   };
 
-  // Sign out handler
   const handleLogout = async () => {
     try {
       await logoutUser();
@@ -126,9 +121,7 @@ export default function App() {
     }
   };
 
-  // Create new blank resume template
   const handleCreateNewResume = () => {
-    // Limit free tier users to 2 resumes maximum
     if (userPlan === "free" && resumes.length >= 2) {
       alert("You have reached the Free Tier limit of 2 resumes. Please upgrade to Pro for unlimited resumes, premium templates, and full ATS breakdowns!");
       return;
@@ -201,7 +194,6 @@ export default function App() {
     }
   };
 
-  // Helper write doc towards firestore
   const saveDocToFirestore = async (uid: string, document: ResumeDocument) => {
     try {
       const docRef = doc(db, "users", uid, "resumes", document.id);
@@ -211,7 +203,6 @@ export default function App() {
     }
   };
 
-  // Navigation handlers
   const handleEditResume = (id: string) => {
     setActiveResumeId(id);
     setActiveTab("builder");
@@ -233,7 +224,6 @@ export default function App() {
     }
   };
 
-  // Builder callback save
   const handleSaveFromBuilder = async (
     content: ResumeContent,
     template: string,
@@ -251,7 +241,6 @@ export default function App() {
           updatedAt: new Date().toISOString(),
         };
 
-        // Write directly to Firebase if authorized
         if (user) {
           saveDocToFirestore(user.uid, revised);
         }
